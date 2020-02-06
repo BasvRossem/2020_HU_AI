@@ -22,14 +22,13 @@ def take_second(elem):
 def scale(x, in_min, in_max, out_min, out_max):
     return (x - in_min) / (in_max - in_min) * (out_max - out_min) + out_min
 
-def model(k, data_t, unknown):
-    distances = []
+def calculate_neighbours(data_t, unknown):
+    distances = list()
 
     # Calculate distances to every point
     for data in data_t:
         distances.append([
             data,
-            math.sqrt(
                 pow(unknown[1] - data[1], 2) + 
                 pow(unknown[2] - data[2], 2) + 
                 pow(unknown[3] - data[3], 2) + 
@@ -37,12 +36,13 @@ def model(k, data_t, unknown):
                 pow(unknown[5] - data[5], 2) + 
                 pow(unknown[6] - data[6], 2) + 
                 pow(unknown[7] - data[7], 2)
-            )
         ])
 
     distances.sort(key=take_second)
-    
-    neighbours = distances[0:k]
+    return distances
+
+def get_season(k, data_point):
+    neighbours = data_point[-1][0:k]
 
     neighbour_seasons = {}
 
@@ -67,19 +67,43 @@ def model(k, data_t, unknown):
 
     season = tmp[0][0]
     if len(tmp) > 1:
-        season = check_date(distances[0][0][0])
+        season = check_date(neighbours[0][0][0])
 
     return season
 
-def ckeck_k(k, data_t, data_v):
-    correct_count = 0
-    for validation in data_v:
-        prediction = model(k, data_t, validation)
+def function(model_data, new_data_point):
+    data_point = list()
+    data_point = new_data_point.tolist()
+    distances = calculate_neighbours(model_data, data_point)
+    data_point.append(distances)
+    return data_point
 
-        if prediction == check_date(validation[0]):
-            correct_count += 1   
 
-    return correct_count
+def find_k(k_min, k_max, step_size, data_t, data):
+    data_v = [None] * data.shape[0] 
+
+    for i in range(data.shape[0]):
+        data_v[i] = function(data_t, data[i])
+    
+    best_k_list = []
+    best_k_count = -1
+
+    for k in range(k_min, k_max, step_size):
+        correct_count = 0
+        for validation in data_v:
+            prediction = get_season(k, validation)
+
+            if prediction == check_date(validation[0]):
+                correct_count += 1 
+        
+        if correct_count > best_k_count:
+            best_k_list = list()
+            best_k_list.append(k)
+            best_k_count = correct_count
+        elif correct_count == best_k_count:
+            best_k_list.append(k)
+
+    return best_k_list
         
 ################################
 # Load all data
@@ -113,21 +137,18 @@ for i in range(len(data_u)):
 ################################
 # Calculate correct predictions with given k
 ################################
-best_k = list()
-best_k_correct = -1
+best_k_list = find_k(1, data_t.shape[0], 2, data_t, data_v)
+best_k = best_k_list[0]
+print("Best k values: ", best_k_list)
 
-for k in range(1, data_t.shape[0], 2):
-    correct_amount = ckeck_k(k, data_t, data_v)
-    # print("K: ", k, ", correct: ", correct_amount)
-    if correct_amount > best_k_correct:
-        best_k_correct = correct_amount
-        best_k = []
-        best_k.append(k)
-    elif correct_amount == best_k_correct:
-        best_k.append(k)
-
-print("Best k value(s): ", best_k)  
+################################
+# Calculate the unknown data points
+################################
 
 for unknown in data_u:
-    prediction = model(best_k[0], data_t, unknown)
+    #calculate neighbours
+    unknown_data_point = function(data_t, unknown)
+
+    # Get season prediction
+    prediction = get_season(best_k, unknown_data_point)
     print(prediction)
