@@ -11,6 +11,33 @@ class Cluster:
     center = None
     points = list()
 
+    def determine_label(self):
+        # Get the season with the highest value
+        seasons = {}
+
+        # Check seasons of neighbours
+        for point in self.points:
+            season = check_date(point[0])
+            if season in seasons:
+                seasons[season] += 1
+            else:
+                seasons[season] = 1
+
+        # Get the season with the highest value
+        highest_season = []
+        highest_season_count = -1
+        for key, value in seasons.items():
+            if value > highest_season_count:
+                highest_season = []
+                highest_season.append([key, value])
+                highest_season_count = value
+            elif value == highest_season_count:
+                highest_season.append([key, value])
+
+        season = highest_season[0][0]
+
+        self.label = season
+
     def calculate_center(self):
         if self.points:
             total_point = [0] * len(self.points[0])
@@ -91,6 +118,9 @@ def calculate_clusters(data_points, k, runs):
         # Calculate cluster center
         for cluster in clusters:
             cluster.calculate_center()
+
+    for cluster in clusters:
+        cluster.determine_label()
 
     return clusters
 
