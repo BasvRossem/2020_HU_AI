@@ -5,13 +5,17 @@ import math
 # Functions
 ################################
 def check_date(label):
-    if label < 20000301:
+    label = str(label)
+    label = label[4:]
+    label = float(label)
+    
+    if label < 301:
         return 'winter'
-    elif 20000301 <= label < 20000601:
+    elif 301 <= label < 601:
         return 'lente'
-    elif 20000601 <= label < 20000901:
+    elif 601 <= label < 901:
         return 'zomer'
-    elif 20000901 <= label < 20001201:
+    elif 901 <= label < 1201:
         return 'herfst'
     else: # from 01-12 to end of year
         return 'winter'
@@ -43,7 +47,8 @@ def calculate_neighbours(data_t, unknown):
 
 def get_season(k, data_point):
     neighbours = data_point[-1][0:k]
-
+    # print(neighbours)
+    # exit()
     neighbour_seasons = {}
 
     # Check seasons of neighbours
@@ -71,7 +76,7 @@ def get_season(k, data_point):
 
     return season
 
-def function(model_data, new_data_point):
+def combine_data_neighbours(model_data, new_data_point):
     data_point = list()
     data_point = new_data_point.tolist()
     distances = calculate_neighbours(model_data, data_point)
@@ -83,7 +88,7 @@ def find_k(k_min, k_max, step_size, data_t, data):
     data_v = [None] * data.shape[0] 
 
     for i in range(data.shape[0]):
-        data_v[i] = function(data_t, data[i])
+        data_v[i] = combine_data_neighbours(data_t, data[i])
     
     best_k_list = []
     best_k_count = -1
@@ -102,6 +107,7 @@ def find_k(k_min, k_max, step_size, data_t, data):
             best_k_count = correct_count
         elif correct_count == best_k_count:
             best_k_list.append(k)
+        print("K: ", k, " correct: ", correct_count)
 
     return best_k_list
         
@@ -119,20 +125,20 @@ min_val = np.amin(data_t, 0)
 max_val = np.amax(data_t, 0)
 for i in range(len(data_t)):  
     for j in range(1, len(data_t[i])):
-        data_t[i][j] = scale(data_t[i][j], min_val[j], max_val[j], 0, 100)
+        data_t[i][j] = scale(data_t[i][j], min_val[j], max_val[j], 0, 5)
 
 
 min_val = np.amin(data_v, 0)
 max_val = np.amax(data_v, 0)
 for i in range(len(data_v)):  
     for j in range(1, len(data_v[i])):
-        data_v[i][j] = scale(data_v[i][j], min_val[j], max_val[j], 0, 100)
+        data_v[i][j] = scale(data_v[i][j], min_val[j], max_val[j], 0, 5)
 
 min_val = np.amin(data_u, 0)
 max_val = np.amax(data_u, 0)
 for i in range(len(data_u)):  
     for j in range(1, len(data_u[i])):
-        data_u[i][j] = scale(data_u[i][j], min_val[j], max_val[j], 0, 100)
+        data_u[i][j] = scale(data_u[i][j], min_val[j], max_val[j], 0, 5)
 
 ################################
 # Calculate correct predictions with given k
@@ -147,7 +153,7 @@ print("Best k values: ", best_k_list)
 
 for unknown in data_u:
     #calculate neighbours
-    unknown_data_point = function(data_t, unknown)
+    unknown_data_point = combine_data_neighbours(data_t, unknown)
 
     # Get season prediction
     prediction = get_season(best_k, unknown_data_point)
