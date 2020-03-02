@@ -1,18 +1,53 @@
 import numpy as np
 
-def toPlant(x):
-    if x <= 1:
-        return "Iris-setosa"
-    elif x <= 2:
-        return "Iris-versicolor"
-    return "Iris-virginica"
-
-
-
 class NeuralNetwork():
     def __init__(self):
-        np.random.seed(1)
-        self.synaptic_weights = 2 * np.random.random((4,1)) - 1
+        self.input_layer    = [None] * 4
+        self.output_layer   = [None] * 3
+
+        for i in range(len(self.input_layer)):
+            self.input_layer[i] = Neuron()
+        for i in range(len(self.output_layer)):
+            self.output_layer[i] = Neuron()
+
+        for neuron in self.output_layer:
+            for neu in self.input_layer:
+                neuron.connect(neu, np.random.random())
+
+    def train(self, training_inputs, training_outputs, training_iterations):
+        for i in range(training_iterations):
+            for input_data in training_inputs:
+                output_data = self.think(input_data)
+                
+                error = [None] * len(self.output_layer)
+                for error_i in range(len(error)):
+                    error[error_i] = training_outputs[i][error_i] - output_data[error_i][0]
+                output_index = 0
+                for neuron in self.output_layer:
+                    for weight_index in range(len(neuron.weights)):
+                        
+                        change = error[output_index] * neuron.sigmoid_derivative(output_data[output_index])
+                        neuron.weights[weight_index] += change
+                    output_index += 1
+            print(self.output_layer[0].weights)
+
+    def think(self, inputs):
+        # Set all input data for the input layer
+        for neuron in range(len(self.input_layer)):
+            self.input_layer[neuron].input = inputs[neuron]
+
+        # Calculate the values of the output neurons
+        output = np.array(np.empty([3, 1]))
+        
+        for i in range(len(self.output_layer)):
+            output[i] = self.output_layer[i].output()
+        return output
+
+class Neuron():
+    def __init__(self):
+        self.connections = np.array(list())
+        self.weights = np.array(list())
+        self.input = None
 
     def sigmoid(self, x):
         return 1 / (1 + np.exp(-x))
@@ -20,47 +55,34 @@ class NeuralNetwork():
     def sigmoid_derivative(self, x):
         return x * (1 - x)
 
-    def train(self, training_inputs, training_outputs, training_iterations):
-        for i in range(training_iterations):
-            output = self.think(training_inputs)
-            error = training_outputs - output
-            adjustments = np.dot(training_inputs.T, error * self.sigmoid_derivative(output))
-            self.synaptic_weights += adjustments
+    def connect(self, node, weight = 1):
+        self.connections = np.append(self.connections, [node])
+        self.weights     = np.append(self.weights,     [weight])
 
-    def think(self, inputs):
-        inputs = inputs.astype(float)
-        output = self.sigmoid(np.dot(inputs, self.synaptic_weights))
-        return output
 
-converter = lambda s: 0 if s == b"Iris-setosa" else (1 if s == b"Iris-versicolor" else 2)
+    def output(self):
+        if len(self.connections):
+            output_total = 0
+            for i in range(len(self.connections)):
+                output_total += self.connections[i].output() * self.weights[i]
+            return self.sigmoid(output_total)
+        else:
+            return self.input
 
+
+np.random.seed(1)
+
+converter = lambda s: [1,0,0] if s == b"Iris-setosa" else ([0,1,0] if s == b"Iris-versicolor" else [0,0,1])
+
+#train
 data_in     = np.genfromtxt('iris.data', delimiter=',', usecols=[0,1,2,3])
 data_out    = np.genfromtxt('iris.data', delimiter=',', usecols=[4], converters={4: converter})
-data_out    = np.array([data_out]).T 
-training_iterations = 200
+training_iterations = 100 #This should eventallu go on until certain error rate
 
-for i in range(1):
-    NN = NeuralNetwork()
-    NN.train(data_in, data_out, training_iterations)
-
-    correct = 0
-    for i in range(len(data_in)):
-        answer = toPlant(data_out[i])
-        print(data_in[i])
-        prediction = toPlant(NN.think(np.array([data_in[i][0],data_in[i][1],data_in[i][2],data_in[i][3]])))
-        if prediction == correct:
-            correct += 1
-
-    correct = correct / len(data_in)    
-    print(NN.synaptic_weights.T, correct)
 
 NN = NeuralNetwork()
+
 NN.train(data_in, data_out, training_iterations)
 
-A = str(input("Input 1: "))
-B = str(input("Input 2: "))
-C = str(input("Input 3: "))
-D = str(input("Input 4: "))
+print(NN.think(np.array([6.7,3.0,5.2,2.3])))
 
-print("New input data: ", A, B, C, D)
-print("NN output: ", toPlant(NN.think(np.array([A,B,C,D]))))
