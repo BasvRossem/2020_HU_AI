@@ -1,5 +1,12 @@
 import numpy as np
+import math
 import random
+
+def sigmoid(x):
+        return 1 / (1 + np.exp(-x))
+
+def sigmoid_derivative(x):
+    return x * (1 - x)
 
 class NeuralNetwork():
     def __init__(self):
@@ -16,78 +23,92 @@ class NeuralNetwork():
                 neuron.connect(neu, np.random.random())
 
     def train(self, training_inputs, training_outputs, error_cutoff):
-        while(True):
-            error = [0] * len(self.output_layer)
-                        
-            runs_per_error = 10
-            for i in range(runs_per_error):
-                training_index = random.randint(0, len(training_inputs) - 1)
-                input_data = training_inputs[training_index]
-                expected = training_outputs[training_index]
-                output_data = self.think(input_data)
+        total_error_abs = math.inf
+        while(total_error_abs > error_cutoff):                      
 
-                # print("Input data:", answer)
-                # print("Output data:", output_data)
-                for error_i in range(len(error)):
-                    error_neuron = self.output_layer[error_i]
-                    error[error_i] += (expected[error_i] - output_data[error_i]) * error_neuron.sigmoid_derivative(output_data[error_i])
-                    #print(training_outputs[input_index][error_i], output_data[error_i][0]) 
-
-            total_error_abs = abs(error[0]) + abs(error[1]) + abs(error[2])
-            print("Error:", total_error_abs, error)
-
-            for j in range(len(error)):
-                error[j] = error[j] / runs_per_error          
+            # Choose random sample from the training data
+            training_index = random.randint(0, len(training_inputs) - 1)
             
+            input_data = training_inputs[training_index]
+            expected = training_outputs[training_index]
+            output_data = self.think(input_data)
 
-            if total_error_abs < error_cutoff:
-                print(self.output_layer[0].weights)
-                break
+            # print("Input data:", expected)
+            # print("Output data:", output_data)
 
-            output_index = 0
+            # Calculate the error for each neuron
+            neuron_count = 0
             for neuron in self.output_layer:
-                for weight_index in range(len(neuron.weights)):
-                    neuron_error = error[output_index] 
-                    change = 0.5 * neuron_error * input_data[output_index]
-                    neuron.weights[weight_index] += change
+                neuron.delta = (expected[neuron_count] - output_data[neuron_count]) * sigmoid_derivative(output_data[neuron_count])
+                neuron_count += 1
+                #print(training_outputs[input_index][error_i], output_data[error_i][0]) 
+
+            # Check if the model is trained using all data
+            total_error_abs = 0            
+            for i in range(len(training_inputs)):
+                data_input = training_inputs[i]
+                data_output = training_outputs[i]
+
+                NN_output = self.think(data_input)
+
+                for neuron_count in range(len(self.output_layer)):
+                    total_error_abs += abs(data_output[neuron_count] - NN_output[neuron_count])
+
+            total_error_abs = total_error_abs / len(training_inputs)
+
+            print("Total error:", total_error_abs)
+            # print("Output:", output_data)
+            # print("Error:", *self.output_layer, sep=', ')
+
+            # Change the weights
+            output_index = 0
+            for neuron in self.output_layer: 
+                change = neuron.delta
+                neuron.apply_weigth_change(change)
                 output_index += 1
-            #print(self.output_layer[0].weights)
+
+        print(self.output_layer[0].weights)
 
     def think(self, inputs):
         # Set all input data for the input layer
         for neuron in range(len(self.input_layer)):
             self.input_layer[neuron].input = inputs[neuron]
+            self.input_layer[neuron].output = inputs[neuron]
 
         # Calculate the values of the output neurons
         output = [None] * len(self.output_layer)
         
         for i in range(len(self.output_layer)):
-            output[i] = self.output_layer[i].output()
+            output[i] = self.output_layer[i].get_output()
         return output
 
 class Neuron():
     def __init__(self):
         self.connections = np.array(list())
         self.weights = np.array(list())
-        self.input = None
+        self.delta = 0
+        self.input = 0
+        self.ouput = 0
 
-    def sigmoid(self, x):
-        return 1 / (1 + np.exp(-x))
-
-    def sigmoid_derivative(self, x):
-        return x * (1 - x)
+    def __repr__(self):
+        return str(self.delta)
 
     def connect(self, node, weight = 1):
         self.connections = np.append(self.connections, [node])
         self.weights     = np.append(self.weights,     [weight])
 
+    def apply_weigth_change(self, change):
+        for i in range(len(self.weights)):
+            self.weights[i] += change
 
-    def output(self):
+    def get_output(self):
         if len(self.connections):
             output_total = 0
             for i in range(len(self.connections)):
-                output_total += self.connections[i].output() * self.weights[i]
-            return self.sigmoid(output_total)
+                product = self.connections[i].get_output() * self.weights[i]
+                output_total += product
+            self.output = sigmoid(output_total)
+            return sigmoid(output_total)
         else:
             return self.input
 
@@ -99,7 +120,7 @@ converter = lambda s: [1,0,0] if s == b"Iris-setosa" else ([0,1,0] if s == b"Iri
 #train
 data_in     = np.genfromtxt('iris.data', delimiter=',', usecols=[0,1,2,3])
 data_out    = np.genfromtxt('iris.data', delimiter=',', usecols=[4], converters={4: converter})
-error_cutoff = 0.05 #This should eventallu go on until certain error rate
+error_cutoff = 0.05
 
 
 NN = NeuralNetwork()
