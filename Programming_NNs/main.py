@@ -3,117 +3,109 @@ import math
 import random
 
 def sigmoid(x):
-        return 1 / (1 + np.exp(-x))
+    return 1 / (1 + np.exp(-x))
 
-def sigmoid_derivative(x):
+def derivative(x):
     return x * (1 - x)
 
-class NeuralNetwork():
+class Neuron:
     def __init__(self):
-        self.input_layer    = [None] * 4
-        self.output_layer   = [None] * 3
+        self.connections_forward = dict()
+        self.connections_backward = dict()
+        self.data = 0
+        self.error = 0
 
-        for i in range(len(self.input_layer)):
-            self.input_layer[i] = Neuron()
-        for i in range(len(self.output_layer)):
-            self.output_layer[i] = Neuron()
+    # Makes a two way connection between the neurons
+    def connect(self, neuron, weight):
+        self.connections_forward[neuron] = weight
+        neuron.connections_backward[self] = weight
 
-        for neuron in self.output_layer:
-            for neu in self.input_layer:
-                neuron.connect(neu, np.random.random())
-
-    def train(self, training_inputs, training_outputs, error_cutoff):
-        total_error_abs = math.inf
-        while(total_error_abs > error_cutoff):                      
-
-            # Choose random sample from the training data
-            training_index = random.randint(0, len(training_inputs) - 1)
-            
-            input_data = training_inputs[training_index]
-            expected = training_outputs[training_index]
-            output_data = self.think(input_data)
-
-            # print("Input data:", expected)
-            # print("Output data:", output_data)
-
-            # Calculate the error for each neuron
-            neuron_count = 0
-            for neuron in self.output_layer:
-                neuron.delta = (expected[neuron_count] - output_data[neuron_count]) * sigmoid_derivative(output_data[neuron_count])
-                neuron_count += 1
-                #print(training_outputs[input_index][error_i], output_data[error_i][0]) 
-
-            # Check if the model is trained using all data
-            total_error_abs = 0            
-            for i in range(len(training_inputs)):
-                data_input = training_inputs[i]
-                data_output = training_outputs[i]
-
-                NN_output = self.think(data_input)
-
-                for neuron_count in range(len(self.output_layer)):
-                    total_error_abs += abs(data_output[neuron_count] - NN_output[neuron_count])
-
-            total_error_abs = total_error_abs / len(training_inputs)
-
-            print("Total error:", total_error_abs)
-            # print("Output:", output_data)
-            # print("Error:", *self.output_layer, sep=', ')
-
-            # Change the weights
-            output_index = 0
-            for neuron in self.output_layer: 
-                change = neuron.delta
-                neuron.apply_weigth_change(change)
-                output_index += 1
-
-        print(self.output_layer[0].weights)
-
-    def think(self, inputs):
-        # Set all input data for the input layer
-        for neuron in range(len(self.input_layer)):
-            self.input_layer[neuron].input = inputs[neuron]
-            self.input_layer[neuron].output = inputs[neuron]
-
-        # Calculate the values of the output neurons
-        output = [None] * len(self.output_layer)
+    def generate_output(self):
+        for neuron, weight in self.connections_forward.items():
+            neuron.data += self.data * weight
+    
+class NeuralNetwork:
+    def __init__(self):
+        self.layers = list()
         
-        for i in range(len(self.output_layer)):
-            output[i] = self.output_layer[i].get_output()
-        return output
+        # Create 4 input Neurons
+        self.layers.append(list())
+        for i in range(4):
+            self.layers[0].append(Neuron())
 
-class Neuron():
-    def __init__(self):
-        self.connections = np.array(list())
-        self.weights = np.array(list())
-        self.delta = 0
-        self.input = 0
-        self.ouput = 0
+        # Create two hidden layers with each two neurons
+        for i in range(2):
+            self.layers.append(list())
+            for j in range(2):
+                self.layers[-1].append(Neuron())
 
-    def __repr__(self):
-        return str(self.delta)
+        # Create an output layer with 3 neurons
+        self.layers.append(list())
+        for i in range(3):
+            self.layers[-1].append(Neuron())
 
-    def connect(self, node, weight = 1):
-        self.connections = np.append(self.connections, [node])
-        self.weights     = np.append(self.weights,     [weight])
+        # Connect all neurons with the neurons in the next layer
+        for i in range(len(self.layers) - 1):
+            for neuron in self.layers[i]:
+                for connection in self.layers[i + 1]:
+                    neuron.connect(connection, np.random.random())
 
-    def apply_weigth_change(self, change):
-        for i in range(len(self.weights)):
-            self.weights[i] += change
+    def train(self, training_input, training_expected, runs = 1000):
+        for run in range(runs):
+            print(run)
+            for run_input in training_input:
+                # Make predictions
+                self.predict(run_input)
 
-    def get_output(self):
-        if len(self.connections):
-            output_total = 0
-            for i in range(len(self.connections)):
-                product = self.connections[i].get_output() * self.weights[i]
-                output_total += product
-            self.output = sigmoid(output_total)
-            return sigmoid(output_total)
-        else:
-            return self.input
+                # Back propagate
+                self.back_propagate(run_input)
+
+    def predict(self, inputs):
+        # Add input values to the input layer
+        for neuron_index in range(len(self.layers[0])):
+            self.layers[0][neuron_index].data = inputs[neuron_index]
+
+        # Feed forward
+        for i in range(len(self.layers)):
+            for neuron in self.layers[i]:
+                # For every neuron not in the first layer, first alpply the simoid function before feeding you input forward
+                if(i != 0):
+                    neuron.data = sigmoid(neuron.data)
+                neuron.generate_output()
+        
+    def back_propagate(self, expected):
+        # Calculate the error for the neurons in the output layers
+        for neuron_index in range(len(self.layers[-1])):
+            neuron = self.layers[-1][neuron_index]
+            neuron.error = (expected[neuron_index] - neuron.data) * derivative(neuron.data)
+
+        # Calculate the error for the neurons in the hidden layers
+        sub_layers = self.layers[1:-1]
+        sub_layers.reverse()
+        for layer in sub_layers:
+            for neuron in layer:
+                error = 0
+                for sub_neuron, weight in neuron.connections_forward.items():
+                    error += sub_neuron.error * weight
+                neuron.error = error * derivative(neuron.data)
+
+        # Apply new weights to the connections
+        for layer in self.layers[:-1]:
+            for neuron in layer:
+                for sub_neuron, weight in neuron.connections_forward.items():
+                    before = neuron.connections_forward[sub_neuron] 
+                    neuron.connections_forward[sub_neuron] = neuron.connections_forward[sub_neuron] + (neuron.error * neuron.data)
+        for neuron in self.layers[-1]:
+            print(neuron.data)
+        #print(before, neuron.connections_forward[sub_neuron], neuron.error , neuron.data)
+
+        
 
 
-np.random.seed(1)
+        
+
+
+np.random.seed(5)
 
 converter = lambda s: [1,0,0] if s == b"Iris-setosa" else ([0,1,0] if s == b"Iris-versicolor" else [0,0,1])
 
@@ -124,9 +116,10 @@ error_cutoff = 0.05
 
 
 NN = NeuralNetwork()
+NN.train(data_in, data_out, 1)
 
-NN.train(data_in, data_out, error_cutoff)
+NN.predict(np.array([5.8,4.0,1.2,0.2]))
 
-print(NN.think(np.array([5.8,4.0,1.2,0.2])))
-print(NN.think(np.array([5.4,3.0,4.5,1.5])))
-print(NN.think(np.array([5.6,2.8,4.9,2.0])))
+for neuron in NN.layers[-1]:
+    print(neuron.data)
+
