@@ -61,23 +61,25 @@ class NeuralNetwork:
             values = new_values
     
     def back_propagation(self, label):
-        all_delta_weights = list()
+        all_delta_weights = np.empty([ 1, len(self.layers[-2])])
+
         for i, layer in enumerate(reversed(self.layers)):
-            current_weights = list()
+            current_weights = []
             for j, neuron in enumerate(layer):
                 if i == 0:
                     self.calculate_output_delta(neuron, label[j])
                 else:
-                    delta_sum = np.sum(np.array(all_delta_weights[i-1]), axis = 0)[j]
+                    delta_sum = np.sum(all_delta_weights, axis = 0)[j]
                     self.calculate_neuron_delta(neuron, delta_sum)
                 self.calculate_weights(neuron)
 
-                neuron_weights = list()
+                neuron_weights = []
                 for weight in neuron.weights:
                     neuron_weights.append(neuron.delta * weight)
                 current_weights.append(neuron_weights)
 
-            all_delta_weights.append(current_weights)
+            all_delta_weights = np.empty([len(layer), len(current_weights)])
+            all_delta_weights = current_weights
     
     def calculate_weights(self, neuron):
         new_weights = []
@@ -90,8 +92,6 @@ class NeuralNetwork:
         neuron.delta = (label - neuron.activation()) * derivative(sigmoid(neuron.inproduct))
 
     def calculate_neuron_delta(self, neuron, delta):
-        if neuron.inproduct  == None:
-            raise ValueError("No inporduct, something went wrong in the last steps")
         neuron.delta = (derivative(sigmoid(neuron.inproduct)) * delta)
 
     
