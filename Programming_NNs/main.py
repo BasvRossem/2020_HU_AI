@@ -27,7 +27,7 @@ class NeuralNetwork:
     def __init__(self, layer_layout, learning_rate = 1):
         self.learning_rate = learning_rate
         self.input_size = layer_layout[0]
-        self.layers = list()
+        self.layers = []
 
         for i, neuron_count in enumerate(layer_layout[1:]):
             layer = []
@@ -54,14 +54,14 @@ class NeuralNetwork:
 
     def feed_forward(self, values):
         for layer in self.layers:
-            new_values = list()
+            new_values = []
             for neuron in layer:
                 neuron.inputs = values
                 new_values.append(neuron.activation())
             values = new_values
     
     def back_propagation(self, label):
-        all_delta_weights = np.array(np.empty([ 1, len(self.layers[-2])]))
+        all_delta_weights = []
 
         for i, layer in enumerate(reversed(self.layers)):
             current_weights = []
@@ -69,7 +69,7 @@ class NeuralNetwork:
                 if i == 0:
                     self.calculate_output_delta(neuron, label[j])
                 else:
-                    delta_sum = np.sum(all_delta_weights, axis = 0)[j]
+                    delta_sum = sum(np.array(all_delta_weights).T[j])
                     self.calculate_neuron_delta(neuron, delta_sum)
                 self.calculate_weights(neuron)
 
@@ -78,8 +78,7 @@ class NeuralNetwork:
                     neuron_weights.append(neuron.delta * weight)
                 current_weights.append(neuron_weights)
 
-            all_delta_weights = np.array(np.empty([1, len(current_weights)]))
-            all_delta_weights = np.array(current_weights)
+            all_delta_weights = current_weights
     
     def calculate_weights(self, neuron):
         new_weights = []
