@@ -61,7 +61,7 @@ class NeuralNetwork:
             values = new_values
     
     def back_propagation(self, label):
-        all_delta_weights = np.empty([ 1, len(self.layers[-2])])
+        all_delta_weights = np.array(np.empty([ 1, len(self.layers[-2])]))
 
         for i, layer in enumerate(reversed(self.layers)):
             current_weights = []
@@ -69,7 +69,7 @@ class NeuralNetwork:
                 if i == 0:
                     self.calculate_output_delta(neuron, label[j])
                 else:
-                    delta_sum = np.sum(all_delta_weights, axis = 0)[j]
+                    delta_sum = sum(all_delta_weights)[j]
                     self.calculate_neuron_delta(neuron, delta_sum)
                 self.calculate_weights(neuron)
 
@@ -78,8 +78,8 @@ class NeuralNetwork:
                     neuron_weights.append(neuron.delta * weight)
                 current_weights.append(neuron_weights)
 
-            all_delta_weights = np.empty([len(layer), len(current_weights)])
-            all_delta_weights = current_weights
+            all_delta_weights = np.array(np.empty([1, len(current_weights)]))
+            all_delta_weights = np.array(current_weights)
     
     def calculate_weights(self, neuron):
         new_weights = []
