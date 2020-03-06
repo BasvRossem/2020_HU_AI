@@ -69,7 +69,7 @@ class NeuralNetwork:
                 if i == 0:
                     self.calculate_output_delta(neuron, label[j])
                 else:
-                    delta_sum = sum(all_delta_weights)[j]
+                    delta_sum = np.sum(all_delta_weights, axis = 0)[j]
                     self.calculate_neuron_delta(neuron, delta_sum)
                 self.calculate_weights(neuron)
 
