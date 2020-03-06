@@ -1,6 +1,7 @@
 import numpy as np
 import math
 import random
+import time
 
 def sigmoid(x):
     return 1 / (1 + np.exp(-x))
@@ -25,10 +26,10 @@ class Neuron:
 class NeuralNetwork:
     def __init__(self, layer_layout, learning_rate = 1):
         self.learning_rate = learning_rate
-        self.input_size = 4
+        self.input_size = layer_layout[0]
         self.layers = list()
 
-        for i, neuron_count in enumerate(layer_layout):
+        for i, neuron_count in enumerate(layer_layout[1:]):
             layer = []
             for _j in range(neuron_count):
                 weight_size = self.input_size
@@ -66,14 +67,10 @@ class NeuralNetwork:
             for j, neuron in enumerate(layer):
                 if i == 0:
                     self.calculate_output_delta(neuron, label[j])
-                    self.calculate_weights(neuron)
                 else:
-                    delta_sum = 0
-                    #Maybe transpose to do sum(list)
-                    for neuron_weight in all_delta_weights[i-1]:
-                        delta_sum += neuron_weight[j]
+                    delta_sum = np.sum(np.array(all_delta_weights[i-1]), axis = 0)[j]
                     self.calculate_neuron_delta(neuron, delta_sum)
-                    self.calculate_weights(neuron)
+                self.calculate_weights(neuron)
 
                 neuron_weights = list()
                 for weight in neuron.weights:
@@ -98,8 +95,11 @@ class NeuralNetwork:
         neuron.delta = (derivative(sigmoid(neuron.inproduct)) * delta)
 
     
-    def test(self, input):
+    def predict(self, input):
         self.feed_forward(input)
+        return self.get_output()
+        
+    def get_output(self):
         results = []
         for output_neuron in self.layers[-1]:
             results.append(output_neuron.activation())
@@ -118,24 +118,34 @@ data_in_norm = data_in / data_in.max(axis = 0)
 data_out    = np.genfromtxt('iris.data', delimiter=',', usecols=[4], converters={4: converter})
 error_cutoff = 0.05
 
-network = NeuralNetwork([2,2,3], 0.05)
+network = NeuralNetwork([4,2,3], 0.05)
 
-for _i in range(0, 1000):
-    if _i % 100 == 0:
+
+iterations = 225
+start = time.perf_counter()
+
+for _i in range(0, iterations):
+    if _i % 10 == 0:
         print(_i)
     for i, input in enumerate(data_in_norm):
         network.train(input, data_out[i])
 
+stop = time.perf_counter()
 
 wrong_list = []
 
 offset = 3
 for i, input in enumerate(data_in_norm[::offset]):
-    answered = [round(num) for num in network.test(input)]
+    answered = [round(num) for num in network.predict(input)]
     expected = [float(num) for num in data_out[i * offset]]
-    print("Expected:", expected)
-    print("Answered:", answered)
+    
     if answered != expected:
+        print("Expected:", expected)
+        print("Answered:", answered)
         wrong_list.append(input)
 
 print(wrong_list)
+print("Amount of wrong:", len(wrong_list))
+
+print("Training took:", stop - start, "seconds")
+print("Average 1 iteration:", (stop - start) / iterations, "seconds")
