@@ -15,20 +15,11 @@ class Neuron:
         self.weights = weights
         self.inproduct = None # Before sigmoid
         self.bias = bias
-        self.new_weights = None
-        self.new_bias = None
 
     def activation(self):
         self.inproduct = np.dot(self.inputs, self.weights) + self.bias
         return sigmoid(self.inproduct)
 
-    def refresh_weights(self):
-        self.weights = self.new_weights
-        self.new_weights = None
-
-    def refresh_bias(self):
-        self.bias = self.new_bias
-        self.new_bias = None
 
     
 class NeuralNetwork:
@@ -59,7 +50,6 @@ class NeuralNetwork:
 
         self.feed_forward(values)
         self.back_propagation(label)
-        self.refresh_all()
 
     def feed_forward(self, values):
         for layer in self.layers:
@@ -75,13 +65,15 @@ class NeuralNetwork:
             current_weights = list()
             for j, neuron in enumerate(layer):
                 if i == 0:
-                    self.output_update(neuron, label[j])
+                    self.calculate_output_delta(neuron, label[j])
+                    self.calculate_weights(neuron)
                 else:
                     delta_sum = 0
                     #Maybe transpose to do sum(list)
                     for neuron_weight in all_delta_weights[i-1]:
                         delta_sum += neuron_weight[j]
-                    self.neuron_update(neuron, delta_sum)
+                    self.calculate_neuron_delta(neuron, delta_sum)
+                    self.calculate_weights(neuron)
 
                 neuron_weights = list()
                 for weight in neuron.weights:
@@ -89,22 +81,13 @@ class NeuralNetwork:
                 current_weights.append(neuron_weights)
 
             all_delta_weights.append(current_weights)
-
-    def output_update(self, neuron, label):
-        self.calculate_output_delta(neuron, label)
+    
+    def calculate_weights(self, neuron):
         new_weights = []
         for i, weight in enumerate(neuron.weights):
             new_weights.append(weight + (self.learning_rate * neuron.delta * neuron.inputs[i]))
-        neuron.new_weights = np.array(new_weights)
-        neuron.new_bias = neuron.bias + (self.learning_rate * neuron.delta)    
-
-    def neuron_update(self, neuron, delta):
-        self.calculate_neuron_delta(neuron, delta)
-        new_weights = []
-        for i, weight in enumerate(neuron.weights):
-            new_weights.append(weight + (self.learning_rate * neuron.delta * neuron.inputs[i]))
-        neuron.new_weights = np.array(new_weights)
-        neuron.new_bias = neuron.bias + (self.learning_rate * neuron.delta)
+        neuron.weights = np.array(new_weights)
+        neuron.bias = neuron.bias + (self.learning_rate * neuron.delta)
 
     def calculate_output_delta(self, neuron, label):
         neuron.delta = (label - neuron.activation()) * derivative(sigmoid(neuron.inproduct))
@@ -114,11 +97,6 @@ class NeuralNetwork:
             raise ValueError("No inporduct, something went wrong in the last steps")
         neuron.delta = (derivative(sigmoid(neuron.inproduct)) * delta)
 
-    def refresh_all(self):
-        for layer in self.layers:
-            for neuron in layer:
-                neuron.refresh_bias()
-                neuron.refresh_weights()
     
     def test(self, input):
         self.feed_forward(input)
@@ -143,10 +121,21 @@ error_cutoff = 0.05
 network = NeuralNetwork([2,2,3], 0.05)
 
 for _i in range(0, 1000):
-    if _i % 10 == 0:
+    if _i % 100 == 0:
         print(_i)
     for i, input in enumerate(data_in_norm):
         network.train(input, data_out[i])
 
-for i, input in enumerate(data_in_norm[:2]):
-    print(network.test(input))
+
+wrong_list = []
+
+offset = 3
+for i, input in enumerate(data_in_norm[::offset]):
+    answered = [round(num) for num in network.test(input)]
+    expected = [float(num) for num in data_out[i * offset]]
+    print("Expected:", expected)
+    print("Answered:", answered)
+    if answered != expected:
+        wrong_list.append(input)
+
+print(wrong_list)
