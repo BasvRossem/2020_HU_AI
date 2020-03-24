@@ -7,84 +7,76 @@ from keras.utils import np_utils
 from keras import backend as K
 import time
 import numpy as np
+import pickle
+import gzip
+import os
+from urllib import request
+from pylab import imshow, show, cm
 
-from matplotlib import pyplot as plt
 
-import tensorflow as tf 
+def fixlabels(labels):
+    new_labels = []
+    for label in labels:
+        tmp_arr = [0] * 10
+        tmp_arr[label] = 1
+        
+        new_labels.append(np.array(tmp_arr))
+
+    return np.array(new_labels)
+
 
 np.random.seed(1234)
 
-batch_size = 128
+batch_size = 1024
 num_classes = 10
-epochs = 12
+epochs = 20
 
 # input image dimensions
 img_rows, img_cols = 28, 28
 
-#===============================
+# ===============================
 # Loading the MNIST dataset
-#===============================
-(x_train, y_train), (x_test, y_test) = mnist.load_data()
+# ===============================
+url = "http://deeplearning.net/data/mnist/mnist.pkl.gz"
+if not os.path.isfile("mnist.pkl.gz"):
+    request.urlretrieve(url, "mnist.pkl.gz")
 
-#===============================
-# Reshaping the data
-#===============================
-if K.image_data_format() == 'channels_first':
-    x_train = x_train.reshape(x_train.shape[0], 1, img_rows, img_cols)
-    x_test = x_test.reshape(x_test.shape[0], 1, img_rows, img_cols)
-    input_shape = (1, img_rows, img_cols)
-else:
-    x_train = x_train.reshape(x_train.shape[0], img_rows, img_cols, 1)
-    x_test = x_test.reshape(x_test.shape[0], img_rows, img_cols, 1)
-    input_shape = (img_rows, img_cols, 1)
+data_file = gzip.open('mnist.pkl.gz', 'rb')
+train_set, valid_set, test_set = pickle.load(data_file, encoding='latin1')
+data_file.close()
 
-#===============================
-# Scaling the dataset to [0...1]
-#===============================
-x_train = x_train.astype('float32')
-x_test = x_test.astype('float32')
-x_train /= 255
-x_test /= 255
-
-#===============================
-# Splitting the labels
-#===============================
-y_train = keras.utils.to_categorical(y_train, num_classes)
-y_test = keras.utils.to_categorical(y_test, num_classes)
-
-#===============================
+# ===============================
 # Creating a model
-#===============================
+# ===============================
 model = Sequential()
 # Input layer
-model.add(Conv2D(32, kernel_size=(3, 3), activation='relu', input_shape=input_shape))
+model.add(Dense(196, activation='relu', input_shape=(img_rows * img_cols,)))
 
-# Hidden layers 
-model.add(Conv2D(64, (3, 3), activation='relu'))
-model.add(MaxPooling2D(pool_size=(2, 2)))
-model.add(Dropout(0.25))
+# Hidden layers
+model.add(Dense(49, activation='relu'))
+model.add(Dropout(0.5))  # Helps preventing overfitting
 
 # Output layer
-model.add(Flatten())
-model.add(Dense(128, activation='relu'))
-model.add(Dropout(0.5))
+# Softmax chooses the most prominent answer
 model.add(Dense(num_classes, activation='softmax'))
 
 # Compiling model
-model.compile(loss=keras.losses.categorical_crossentropy, optimizer=keras.optimizers.Adadelta(), metrics=['accuracy'])
+# Adam climbs to a higher accuracy much quicker than SGD So I'm using this one
+model.compile(loss=keras.losses.categorical_crossentropy, optimizer=keras.optimizers.Adam(
+    learning_rate=0.001, beta_1=0.9, beta_2=0.999, amsgrad=False), metrics=['accuracy'])
 
-#===============================
+# ===============================
 # Train the model
-#===============================
-model.fit(x_train, y_train,
+# ===============================
+model.fit(train_set[0], fixlabels(train_set[1]),
           batch_size=batch_size,
           epochs=epochs,
           verbose=1,
-          validation_data=(x_test, y_test))
+          validation_data=(valid_set[0], fixlabels(valid_set[1])))
 
-#===============================
+# ===============================
 # print the scores
-#===============================
-score = model.evaluate(x_test, y_test, verbose=0)
+# ===============================
+score = model.evaluate(test_set[0], fixlabels(test_set[1]), verbose=0)
 print('Test loss:', score[0])
 print('Test accuracy:', score[1])
