@@ -1,8 +1,11 @@
 from functools import reduce
 from operator import add
+from operator import mul
 from random import randint
 from random import random
-from operator import mul
+from random import seed
+
+import numpy as np
 
 
 def individual(length, min, max):
@@ -27,15 +30,16 @@ def fitness(individual, target_sum, target_mult):
     :param target: the sum that we are aiming for (X)
     6.1 Genetic algorithms 85
     """
-    calculated_sum = 0
-    calculated_mult = []
-    for i in range(len(individual)):
-        if individual[i]:   # if genome is 1
-            calculated_sum += (i + 1)
+    piles = [[], []]
+    for i, pile in enumerate(individual):
+        if pile == 0:
+            piles[0].append(i + 1)
         else:  # if genome is 0
-            calculated_mult.append(i + 1) 
-    calculated_mult = reduce(mul, calculated_mult, 1)
-    return abs(target_sum - calculated_sum) + abs(target_mult - calculated_mult)
+            piles[1].append(i + 1)
+
+    calculated_mult = abs(reduce(mul, piles[1], 1) - 360)
+    calculated_sum = abs(reduce(add, piles[0], 0) - 36)
+    return calculated_sum + calculated_mult
 
 
 def grade(population, target_sum, target_mult):
@@ -50,7 +54,7 @@ def grade(population, target_sum, target_mult):
     return summed / len(population)
 
 
-def evolve(population, target_sum, target_mult, retain = 0.2, random_select = 0.05, mutate = 0.01):
+def evolve(population, target_sum, target_mult, retain=0.3, random_select=0.05, mutate=0.04):
     graded = [(fitness(x, target_sum, target_mult), x) for x in population]
     graded = [x[1] for x in sorted(graded)]
     retain_length = int(len(graded) * retain)
@@ -77,8 +81,8 @@ def evolve(population, target_sum, target_mult, retain = 0.2, random_select = 0.
     for individual in children:
         if mutate > random():
             pos_to_mutate = randint(0, len(individual) - 1)
-            individual[pos_to_mutate] = \
-                randint(min(individual), max(individual))
+            individual[pos_to_mutate] = randint(
+                min(individual), max(individual))
 
     parents.extend(children)
     return parents
@@ -87,17 +91,43 @@ def evolve(population, target_sum, target_mult, retain = 0.2, random_select = 0.
 target_sum = 36
 target_mult = 360
 
-p_count = 500  # number of individuals in population
+p_count = 200  # number of individuals in population
 i_length = 10  # N
 i_min = 0  # value range for generating individuals
 i_max = 1
 
 p = population(p_count, i_length, i_min, i_max)
-fitness_history = [grade(p, target_sum, target_mult), ]
 
 
-for _ in range(100):  # we stop after 100 generations
+for i in range(500):  # we stop after 500 generations
     p = evolve(p, target_sum, target_mult)
     score = grade(p, target_sum, target_mult)
-    fitness_history.append(score)
     print(score)
+    if score == 0.0:
+        print("Found after", i, "iterations")
+        break
+
+# ============================================================
+# Variable explanation
+# ============================================================
+# p_count:
+#   I have chosen to make a populatino of 200 individuals.
+#   I have tried to increase the population count to 500,
+#   but this yielded no better effects, besides a slower
+#   calculation time.
+#
+# retain:
+#   I have gotten quite a large population size, so keeping
+#   a larger number of my best guys helps a lot. I do need
+#   to keep in mind that i should not put the number too high
+#   or else the mutations won't come through as expected.
+#   
+# random_select:
+#   This just seems to work fine, I could not really measure
+#   the impact of this one due to the randomness of the 
+#   assignment.
+#
+# mutate:
+#   I have chosen to increase to mutaion amount due to trying
+#   to escape the local munimum.
+# ============================================================
