@@ -34,9 +34,9 @@ img_rows, img_cols = 28, 28
 # ===============================
 # Loading the MNIST dataset
 # ===============================
-url = "http://deeplearning.net/data/mnist/mnist.pkl.gz"
+URL = "http://deeplearning.net/data/mnist/mnist.pkl.gz"
 if not os.path.isfile("mnist.pkl.gz"):
-    request.urlretrieve(url, "mnist.pkl.gz")
+    request.urlretrieve(URL, "mnist.pkl.gz")
 
 data_file = gzip.open('mnist.pkl.gz', 'rb')
 train_set, valid_set, test_set = pickle.load(data_file, encoding='latin1')
