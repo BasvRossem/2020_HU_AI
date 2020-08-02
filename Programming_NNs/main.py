@@ -1,13 +1,11 @@
 """A object oriented neural network implementation."""
 
-import time
-
 import numpy as np
 
 from neural_network import NeuralNetwork
 from preprocessing import converter
 
-np.random.seed(1)
+np.random.seed(1234)
 
 
 # read input data
@@ -19,16 +17,25 @@ labels = np.genfromtxt('data/iris.data', delimiter=',', usecols=[4], converters=
 network = NeuralNetwork([4, 2, 3], 0.05)
 
 # Training the network
-ITERATIONS = 225
-start = time.perf_counter()
+ITERATIONS = 1234
 
 for iteration in range(ITERATIONS):
-    if iteration % 10 == 0:
-        print(iteration)
+    # Train
     for i, values in enumerate(data_in):
         network.train(values, labels[i])
 
-stop = time.perf_counter()
+    # Do some progress bar printing
+    if (iteration % 3 == 0 and iteration != 0) or iteration == ITERATIONS-1:
+        BAR_PARTS = 20
+        CMD_BAR = "\r" + str(iteration + 1) + "/" + str(ITERATIONS) + "["
+        bars = round(iteration / (round(ITERATIONS / BAR_PARTS)))
+        for percentage in range(bars):
+            CMD_BAR += "█"
+        for space in range(BAR_PARTS - bars):
+            CMD_BAR += "-"
+        print(CMD_BAR + "]", end="", flush="True")
+print("")
+
 
 # Checking the network
 wrong_list = []
@@ -43,13 +50,4 @@ for i, values in enumerate(data_in[::OFFSET]):
         print("Answered:", answered)
         wrong_list.append(values)
 
-print(wrong_list)
-print("Amount of wrong:", len(wrong_list))
-
-print("Training took:", stop - start, "seconds")
-print("Average 1 iteration:", (stop - start) / ITERATIONS, "seconds")
-
-print("================================================================")
-guess = network.predict([5.1, 3.5, 1.4, 0.2])
-print(guess)
-print("================================================================")
+print(list(wrong_list))
