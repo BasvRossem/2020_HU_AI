@@ -1,25 +1,22 @@
-import keras
-from keras.datasets import mnist
-from keras.models import Sequential
-from keras.layers import Dense, Dropout, Flatten
-from keras.layers import Conv2D, MaxPooling2D
-from keras.utils import np_utils
-from keras import backend as K
-import time
-import numpy as np
-import pickle
+"""Training a neural network using keras and the MNIST dataset"""
 import gzip
 import os
+import pickle
 from urllib import request
-from pylab import imshow, show, cm
+
+import keras
+import numpy as np
+from keras.layers import Dense, Dropout
+from keras.models import Sequential
 
 
 def fixlabels(labels):
+    """Changes the labels to be used in the keras model."""
     new_labels = []
     for label in labels:
         tmp_arr = [0] * 10
         tmp_arr[label] = 1
-        
+
         new_labels.append(np.array(tmp_arr))
 
     return np.array(new_labels)
@@ -27,9 +24,9 @@ def fixlabels(labels):
 
 np.random.seed(1234)
 
-batch_size = 1024
-num_classes = 10
-epochs = 20
+BATCH_SIZE = 1024
+NUM_CLASSES = 10
+EPOCHS = 20
 
 # input image dimensions
 img_rows, img_cols = 28, 28
@@ -58,7 +55,7 @@ model.add(Dropout(0.5))  # Helps preventing overfitting
 
 # Output layer
 # Softmax chooses the most prominent answer
-model.add(Dense(num_classes, activation='softmax'))
+model.add(Dense(NUM_CLASSES, activation='softmax'))
 
 # Compiling model
 # Adam climbs to a higher accuracy much quicker than SGD So I'm using this one
@@ -69,8 +66,8 @@ model.compile(loss=keras.losses.categorical_crossentropy, optimizer=keras.optimi
 # Train the model
 # ===============================
 model.fit(train_set[0], fixlabels(train_set[1]),
-          batch_size=batch_size,
-          epochs=epochs,
+          batch_size=BATCH_SIZE,
+          epochs=EPOCHS,
           verbose=1,
           validation_data=(valid_set[0], fixlabels(valid_set[1])))
 
