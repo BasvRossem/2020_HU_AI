@@ -2,7 +2,6 @@
 
 import numpy as np
 
-from functions import derivative
 from neuron import Neuron
 
 
