@@ -28,7 +28,9 @@ class NeuralNetwork:
                 weights = np.random.rand(1, weight_size)
                 bias = np.random.random()
                 neuron = Neuron(np.array([]), weights[0], bias)
+
                 layer.append(neuron)
+
             self.layers.append(layer)
 
         print(self.layers)
@@ -67,17 +69,17 @@ class NeuralNetwork:
         for i, layer in enumerate(reversed(self.layers)):
             current_weights = []
             for j, neuron in enumerate(layer):
-                # On the output layer
+                # Calculating a new delta
                 if i == 0:
-                    self.calculate_output_delta(neuron, label[j])
+                    neuron.calculate_delta(label[j] - neuron.activation())
                 else:
                     delta_sum = sum(np.array(all_delta_weights).T[j])
-                    self.calculate_neuron_delta(neuron, delta_sum)
+                    neuron.calculate_delta(delta_sum)
+
+                # Calculate the new weights
                 self.calculate_weights(neuron)
 
-                neuron_weights = []
-                for weight in neuron.weights:
-                    neuron_weights.append(neuron.delta * weight)
+                neuron_weights = [neuron.delta * weight for weight in neuron.weights]
                 current_weights.append(neuron_weights)
 
             all_delta_weights = current_weights
@@ -91,18 +93,6 @@ class NeuralNetwork:
             new_weights.append(weight + (self.learning_rate * neuron.delta * neuron.inputs[i]))
         neuron.weights = np.array(new_weights)
         neuron.bias = neuron.bias + (self.learning_rate * neuron.delta)
-
-    def calculate_output_delta(self, neuron, label):
-        """
-        Calculate and set the new neuron delta for an output neuron.
-        """
-        neuron.delta = (label - neuron.activation()) * derivative(neuron.activation())
-
-    def calculate_neuron_delta(self, neuron, delta):
-        """
-        Calculate and set the new neuron delta for a neuron.
-        """
-        neuron.delta = (derivative(neuron.activation()) * delta)
 
     def predict(self, data):
         """
